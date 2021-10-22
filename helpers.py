@@ -4,7 +4,7 @@ from datetime import datetime
 import calendar
 import requests
 import lxml.html as lh
-import urllib2
+import urllib.request
 import ssl
 import json
 #import pandas as pd
@@ -36,7 +36,7 @@ def get_range(month_start, month_stop, year):
   # Stop in ms
   month_stop += 1
   if month_stop == 13:
-    month_stop = 01
+    month_stop = 1
     year += 1
 
   stop = now - get_ms(month_stop, year)
@@ -49,7 +49,7 @@ def make_url(month_start, month_stop, year, plot):
     timerange = get_range(month_start, month_stop, year)
   
     if year == 2021: 
-      url="http://alimonitor.cern.ch/display?  annotation.enabled=true&imgsize=1024x600&interval.max="+str(timerange[1])+"&interval.min="+str(timerange[0])+"&page="+plot+"&plot_series=Bari_HTC&plot_series=CNAF&plot_series=CNAF-DUE&plot_series=Catania-VF&plot_series=Legnaro_HTC&plot_series=Torino&plot_series=TriGrid_Catania&plot_series=Trieste"
+      url="http://alimonitor.cern.ch/display?  annotation.enabled=true&imgsize=1024x600&interval.max="+str(timerange[1])+"&interval.min="+str(timerange[0])+"&page="+plot+"&plot_series=Bari_HTC&plot_series=CNAF&plot_series=CNAF-DUE&plot_series=Catania-VF&plot_series=Legnaro_HTC&plot_series=Torino&&plot_series=Torino-HTC&&plot_series=TriGrid_Catania&plot_series=Trieste"
     else:
       url="http://alimonitor.cern.ch/display?annotation.enabled=true&imgsize=1024x600&interval.max="+str(timerange[1])+"&interval.min="+str(timerange[0])+"&page="+plot+"&plot_series=Bari&plot_series=CNAF&plot_series=CNAF-DUE&plot_series=Catania-VF&plot_series=Legnaro&plot_series=Torino&plot_series=TriGrid_Catania&plot_series=Trieste&plot_series=Catania"
 
@@ -74,6 +74,7 @@ def get_monalisa_values(month_start, month_stop, year, metric):
       t.xpath('//td')
       site = t[1].text_content().strip()
       value = t[2].text_content()
+      #print(value)
       # cputimes are given with unit
       if 'M' in value:
           val = int(float(value.split()[0])*1000000)
@@ -81,6 +82,9 @@ def get_monalisa_values(month_start, month_stop, year, metric):
       elif 'K' in value:
           val = int(float(value.split()[0])*1000)
           values[site] = val
+      elif 'B' in value:
+          val = int(float(value.split()[0])*1)
+          values[site] = val  
       else:
           values[site] = int(value) 
        
@@ -88,7 +92,7 @@ def get_monalisa_values(month_start, month_stop, year, metric):
 
 def merge_monalisa(values):
     time = {}
-    #print values.keys() 
+    print (values.keys() )
     try:
         time['CNAF'] = str(values['CNAF'] + values['CNAF-DUE']) 
     except: 
@@ -114,8 +118,18 @@ def merge_monalisa(values):
         time['LEGNARO'] = str(values['Legnaro_HTC'])
     except:
         time['LEGNARO'] = str(values['Legnaro'])
+     
+    try:
+        time['TORINO'] = str(values['Torino'] + values['Torino-HTC'])
+    except:
+        try:
+            time['TORINO'] = str(values['Torino'])
+        except:
+            try:
+                time['TORINO'] = str(values['Torino-HTC']) 
+            except:
+                time['TORINO'] = 1
         
-    time['TORINO'] = str(values['Torino'])
     
     time['TRIESTE'] = str(values['Trieste'])
 
@@ -127,7 +141,7 @@ def read_write_egi(url, month, year, measurement):
     ctx = ssl.create_default_context()
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
-    response = urllib2.urlopen(url,context = ctx).read()
+    response = urllib.request.urlopen(url,context = ctx).read()
     data = json.loads(response)
     for d in data:
       if d["id"] in sites:
@@ -141,7 +155,7 @@ def read_write_egi(url, month, year, measurement):
     for s in sites_final:
       #print s + " " + str(total[s]) 
       data = measurement+",site="+s+" egi="+str(total[s])+" "+str(timestamp)
-      print data
+      print(data)
       x = requests.post(influx_url, data = data)
       print(x)
 
@@ -151,7 +165,7 @@ def read_egi(url, month, year, measurement):
     ctx = ssl.create_default_context()
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
-    response = urllib2.urlopen(url,context = ctx).read()
+    response = urllib.request.urlopen(url,context = ctx).read()
     data = json.loads(response)
     for d in data:
       if d["id"] in sites:
@@ -164,12 +178,30 @@ def read_egi(url, month, year, measurement):
 
 def remap_egi(values):
     remapped = {}
-    remapped['CNAF'] = values['INFN-T1']
-    remapped['BARI'] = values['INFN-BARI']
-    remapped['CATANIA'] = values['INFN-CATANIA']
-    remapped['LEGNARO'] = values['INFN-LNL-2']
-    remapped['TORINO'] = values['INFN-TORINO']
-    remapped['TRIESTE'] = values['INFN-TRIESTE']
+    try:
+        remapped['CNAF'] = values['INFN-T1']
+    except:
+         remapped['CNAF'] = 1
+    try:        
+        remapped['BARI'] = values['INFN-BARI']
+    except:
+        remapped['BARI'] = 1
+    try:    
+        remapped['CATANIA'] = values['INFN-CATANIA']
+    except:
+        remapped['CATANIA'] = 1
+    try:    
+        remapped['LEGNARO'] = values['INFN-LNL-2']
+    except:
+        remapped['LEGNARO'] =  1
+    try:
+        remapped['TORINO'] = values['INFN-TORINO']
+    except: 
+        remapped['TORINO'] = 1
+    try:    
+        remapped['TRIESTE'] = values['INFN-TRIESTE']
+    except:   
+        remapped['TRIESTE'] = 1
     return remapped
     
 def write_influx(influx_url, month, year, metric, origin, time):
