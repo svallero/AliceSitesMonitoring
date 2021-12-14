@@ -1,6 +1,6 @@
 #!/bin/sh
 
-docker run -p 8086:8086 -v influxdb:/var/lib/influxdb \
+docker run -p 8086:8086 -v influxdata:/var/lib/influxdb \
           --rm --name influxdb \
           -d influxdb:1.8
 

@@ -112,8 +112,10 @@ def merge_monalisa(values):
             try:
                 time['CATANIA'] = str(values['TriGrid_Catania']+ values['Catania-VF'])
             except:
-                time['CATANIA'] = str(values['TriGrid_Catania'])
-
+                try:
+                    time['CATANIA'] = str(values['TriGrid_Catania'])
+                except:
+                    time['CATANIA'] = str(values['Catania-VF'])
     try:
         time['LEGNARO'] = str(values['Legnaro_HTC'])
     except:
@@ -137,7 +139,7 @@ def merge_monalisa(values):
 
 def read_write_egi(url, month, year, measurement):
     total = {}
-    
+    total["TRIGRID-INFN-CATANIA"]=0
     ctx = ssl.create_default_context()
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
@@ -161,7 +163,7 @@ def read_write_egi(url, month, year, measurement):
 
 def read_egi(url, month, year, measurement):
     total = {}
-    
+    total["TRIGRID-INFN-CATANIA"]=0
     ctx = ssl.create_default_context()
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
